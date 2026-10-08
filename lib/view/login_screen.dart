@@ -14,11 +14,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
+  TextEditingController emailController = TextEditingController(text: "tabasualeh@gmail.com");
+  TextEditingController passwordController = TextEditingController(text: "TS@12345");
   FocusNode emailFocus = FocusNode();
   FocusNode passFocus = FocusNode();
-  bool isProtected = false;
+  bool isProtected = true;
   User? loggedInUser;
   bool isLoading = false;
 
@@ -49,6 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
     // TODO: implement didUpdateWidget
     super.didUpdateWidget(oldWidget);
   }
+
+  // drive my car
 
   @override
   Widget build(BuildContext context) {
@@ -187,12 +189,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 0.06 * sh,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.appbarColor.withValues(alpha: 0.7)),
-                  onPressed: () async {
+                  onPressed: () {
                     setState(() {
                       isLoading = true;
                     });
 
-                    await Future.delayed(const Duration(seconds: 5));
+                    // await Future.delayed(const Duration(seconds: 5));
 
                     for (var myUserData in users) {
                       if (myUserData.email == emailController.text && myUserData.password == passwordController.text) {

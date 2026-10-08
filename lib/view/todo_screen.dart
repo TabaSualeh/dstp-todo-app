@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import '../constants/app_assets.dart';
@@ -15,10 +16,6 @@ class TodoScreen extends StatefulWidget {
 }
 
 class _TodoScreenState extends State<TodoScreen> {
-  final titleController = TextEditingController();
-  final descriptionController = TextEditingController();
-
-  // final List<Todo> todoList = [Todo(title: "Math HomeWork", description: "Do it now"), Todo(title: "Math HomeWork", description: "Do it now"), Todo(title: "Flutter Assignment", dateTime: DateTime(2001, 08, 02), isCompleted: true), Todo(title: "Flutter Assignment", dateTime: DateTime(2001, 08, 02), isCompleted: true)];
   int currentIndex = 0;
   final List<Todo> taskList = [];
 
@@ -46,6 +43,12 @@ class _TodoScreenState extends State<TodoScreen> {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.appbarColor,
         onPressed: () {
+          DateTime selectedDate = DateTime.now();
+          TimeOfDay selectedTime = TimeOfDay.now();
+
+          final titleController = TextEditingController();
+          final descriptionController = TextEditingController();
+
           showModalBottomSheet(
             backgroundColor: AppColors.bottomSheetBgColor,
             shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -53,100 +56,174 @@ class _TodoScreenState extends State<TodoScreen> {
             // isDismissible: false,
             context: context,
             builder: (context) {
-              return SafeArea(
-                child: Padding(
-                  padding: EdgeInsets.only(left: 15, right: 15, top: 15, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
+              return StatefulBuilder(
+                builder: (context, setBottomSheet) {
+                  return SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.only(left: 15, right: 15, top: 15, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text("New Task", style: GoogleFonts.acme(color: AppColors.primaryText, fontSize: 26)),
-                          const Spacer(),
-                          IconButton(
-                            iconSize: 22,
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            icon: Container(
-                              decoration: const BoxDecoration(color: AppColors.cancelIconColor, shape: BoxShape.circle),
-                              child: const Icon(Icons.keyboard_arrow_down_outlined, color: AppColors.bgColor),
+                          Row(
+                            children: [
+                              Text("New Task", style: GoogleFonts.acme(color: AppColors.primaryText, fontSize: 26)),
+                              const Spacer(),
+                              IconButton(
+                                iconSize: 22,
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                icon: Container(
+                                  decoration: const BoxDecoration(color: AppColors.cancelIconColor, shape: BoxShape.circle),
+                                  child: const Icon(Icons.keyboard_arrow_down_outlined, color: AppColors.bgColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          TextField(
+                            controller: titleController,
+                            style: const TextStyle(color: AppColors.primaryText),
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              fillColor: AppColors.inputFieldBgColor,
+                              filled: true,
+                              hint: Text("Enter Task Title", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
+                              label: Text("TITLE", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
+                              ),
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          TextField(
+                            controller: descriptionController,
+                            minLines: 4,
+                            maxLines: 20,
+                            style: const TextStyle(color: AppColors.primaryText),
+                            textInputAction: TextInputAction.newline,
+                            decoration: InputDecoration(
+                              fillColor: AppColors.inputFieldBgColor,
+                              filled: true,
+                              hint: Text("Enter Description (optional)", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
+                              label: Text("DESCRIPTION", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
+                              ),
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+
+                          const SizedBox(height: 25),
+
+                          // DATETIME--------------------------------------------
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final tempDate = await showDatePicker(
+                                      context: context,
+                                      firstDate: DateTime.now(),
+                                      lastDate: DateTime(3000),
+                                      initialDate: DateTime.now(),
+                                    );
+                                    if (tempDate != null) {
+                                      selectedDate = tempDate;
+                                    }
+                                    setBottomSheet(() {});
+                                    print("SELECTED DATE=========> $selectedDate");
+                                  },
+                                  label: Text(
+                                    "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                                  ),
+                                  icon: Icon(Icons.calendar_month_outlined),
+                                ),
+                              ),
+                              SizedBox(width: 20),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final tempTime = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                                    if (tempTime != null) {
+                                      selectedTime = tempTime;
+                                    }
+                                    setBottomSheet(() {});
+                                  },
+                                  label: Text(
+                                    selectedTime.format(context),
+                                  ),
+                                  icon: Icon(Icons.schedule_outlined),
+                                ),
+                              ),
+                            ],
+                          ),
+                          // ----------------------------------------------------
+                          const SizedBox(height: 25),
+                          SizedBox(
+                            width: double.infinity,
+                            height: MediaQuery.of(context).size.height * 0.05,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                if (titleController.text.isNotEmpty) {
+                                  taskList.add(
+                                    Todo(
+                                      title: titleController.text,
+                                      description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                                      dateTime: DateTime(
+                                        selectedDate.year,
+                                        selectedDate.month,
+                                        selectedDate.day,
+                                        selectedTime.hour,
+                                        selectedTime.minute,
+                                      ),
+                                    ),
+                                  );
+                                  setState(() {});
+                                  Navigator.pop(context);
+                                  titleController.clear();
+                                  descriptionController.clear();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "New Task has been added",
+                                        style: GoogleFonts.robotoSerif(
+                                          color: AppColors.primaryText,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else {
+                                  Fluttertoast.showToast(
+                                    msg: "Title is required",
+                                    backgroundColor: Colors.red,
+                                    textColor: Colors.white,
+                                    fontSize: 16.0,
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBtnColor),
+                              child: Text("ADD TASK", style: GoogleFonts.acme(color: AppColors.primaryBtnTextColor)),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
-                      TextField(
-                        controller: titleController,
-                        style: const TextStyle(color: AppColors.primaryText),
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          fillColor: AppColors.inputFieldBgColor,
-                          filled: true,
-                          hint: Text("Enter Task Title", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
-                          label: Text("TITLE", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
-                          ),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      TextField(
-                        controller: descriptionController,
-                        minLines: 4,
-                        maxLines: 20,
-                        style: const TextStyle(color: AppColors.primaryText),
-                        textInputAction: TextInputAction.newline,
-                        decoration: InputDecoration(
-                          fillColor: AppColors.inputFieldBgColor,
-                          filled: true,
-                          hint: Text("Enter Description (optional)", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
-                          label: Text("DESCRIPTION", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
-                          ),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-                      SizedBox(
-                        width: double.infinity,
-                        height: MediaQuery.of(context).size.height * 0.05,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (titleController.text.isNotEmpty) {
-                              taskList.add(Todo(title: titleController.text, description: descriptionController.text.isEmpty ? null : descriptionController.text, dateTime: DateTime.now()));
-                              setState(() {});
-                              Navigator.pop(context);
-                            } else {
-                              // Fluttertoast.showToast(msg: "Title is required", toastLength: Toast.LENGTH_SHORT, backgroundColor: Colors.red, textColor: Colors.white, fontSize: 16.0);
-                              // ScaffoldMessenger.of(context).showSnackBar(
-                              //   SnackBar(
-                              //     behavior: SnackBarBehavior.fixed,
-                              //     content: Text('Title is Required'),
-                              //     backgroundColor: Colors.red,
-                              //   ),
-                              // );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBtnColor),
-                          child: Text("ADD TASK", style: GoogleFonts.acme(color: AppColors.primaryBtnTextColor)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           );
@@ -159,12 +236,6 @@ class _TodoScreenState extends State<TodoScreen> {
                 AppAssets.noDataAnimation,
               ),
             )
-          // Center(
-          //         child: Text(
-          //           "No Tasks found yet",
-          //           style: GoogleFonts.acme(color: AppColors.primaryText, fontSize: 36),
-          //         ),
-          //       )
           : ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               itemCount: taskList.length,
@@ -193,19 +264,19 @@ class _TodoScreenState extends State<TodoScreen> {
                           });
                         },
                       ),
-                      CircleAvatar(
-                        radius: 36,
-                        backgroundColor: (myTodoList.isCompleted ?? false) ? AppColors.taskCardBorderColor.withValues(alpha: 0.4) : AppColors.taskCardBorderColor,
-                        child: CircleAvatar(
-                          radius: 34,
-                          backgroundColor: AppColors.inactiveCheckboxBorderColor,
-                          backgroundImage: index % 2 == 0
-                              ? const AssetImage(AppAssets.profilePic)
-                              : const NetworkImage(
-                                  "https://avatars.githubusercontent.com/u/107749753?v=4",
-                                ),
-                        ),
-                      ),
+                      // CircleAvatar(
+                      //   radius: 36,
+                      //   backgroundColor: (myTodoList.isCompleted ?? false) ? AppColors.taskCardBorderColor.withValues(alpha: 0.4) : AppColors.taskCardBorderColor,
+                      //   child: CircleAvatar(
+                      //     radius: 34,
+                      //     backgroundColor: AppColors.inactiveCheckboxBorderColor,
+                      //     backgroundImage: index % 2 == 0
+                      //         ? const AssetImage(AppAssets.profilePic)
+                      //         : const NetworkImage(
+                      //             "https://avatars.githubusercontent.com/u/107749753?v=4",
+                      //           ),
+                      //   ),
+                      // ),
                       const SizedBox(width: 9),
                       Expanded(
                         child: Column(
@@ -222,10 +293,13 @@ class _TodoScreenState extends State<TodoScreen> {
                                     child: Text(myTodoList.description!, style: const TextStyle(color: AppColors.secondaryText, fontSize: 16)),
                                   ),
                                 ],
-                                const Spacer(),
                                 Padding(
                                   padding: const EdgeInsets.only(right: 16),
-                                  child: Text(myTodoList.dateTime != null ? "${myTodoList.dateTime?.year}/${myTodoList.dateTime?.month}/${myTodoList.dateTime?.day}" : "", style: const TextStyle(color: AppColors.secondaryText, fontSize: 14)),
+                                  child: Text(
+                                    myTodoList.dateTime != null ? "${myTodoList.dateTime?.year}/${myTodoList.dateTime?.month}/${myTodoList.dateTime?.day}\n${myTodoList.dateTime?.hour}:${myTodoList.dateTime?.minute}" : "",
+                                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                                    textAlign: TextAlign.end,
+                                  ),
                                 ),
                               ],
                             ),
