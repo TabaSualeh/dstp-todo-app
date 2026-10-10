@@ -4,12 +4,12 @@ class User {
   String name;
   String email;
   String password;
-  List<Todo>? userTodo = [];
+  List<Todo> userTodo;
 
   User({
     required this.name,
     required this.email,
     required this.password,
-    this.userTodo,
-  });
+    List<Todo>? userTodo,
+  }) : userTodo = userTodo ?? [];
 }

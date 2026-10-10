@@ -5,11 +5,15 @@ import 'package:lottie/lottie.dart';
 import '../constants/app_assets.dart';
 import '../constants/app_colors.dart';
 import '../model/todo_model.dart';
+import '../model/user_model.dart';
 
 class TodoScreen extends StatefulWidget {
-  const TodoScreen({required this.userTodo});
+  const TodoScreen({required this.userTodo, required this.addTodo});
 
   final List<Todo> userTodo;
+  final void Function(Todo) addTodo;
+
+  // final User loggedInUser;
 
   @override
   State<TodoScreen> createState() => _TodoScreenState();
@@ -17,13 +21,14 @@ class TodoScreen extends StatefulWidget {
 
 class _TodoScreenState extends State<TodoScreen> {
   int currentIndex = 0;
-  final List<Todo> taskList = [];
+
+  // late final List<Todo> taskList = widget.loggedInUser.userTodo ??= [];
+  List<Todo> taskList = [];
 
   @override
   void initState() {
-    taskList.addAll(widget.userTodo);
-    // TODO: implement initState
     super.initState();
+    taskList.addAll(widget.userTodo);
   }
 
   @override
@@ -135,9 +140,9 @@ class _TodoScreenState extends State<TodoScreen> {
                                   onPressed: () async {
                                     final tempDate = await showDatePicker(
                                       context: context,
+                                      initialDate: DateTime.now(),
                                       firstDate: DateTime.now(),
                                       lastDate: DateTime(3000),
-                                      initialDate: DateTime.now(),
                                     );
                                     if (tempDate != null) {
                                       selectedDate = tempDate;
@@ -177,19 +182,21 @@ class _TodoScreenState extends State<TodoScreen> {
                             child: ElevatedButton(
                               onPressed: () {
                                 if (titleController.text.isNotEmpty) {
-                                  taskList.add(
-                                    Todo(
-                                      title: titleController.text,
-                                      description: descriptionController.text.isEmpty ? null : descriptionController.text,
-                                      dateTime: DateTime(
-                                        selectedDate.year,
-                                        selectedDate.month,
-                                        selectedDate.day,
-                                        selectedTime.hour,
-                                        selectedTime.minute,
-                                      ),
+                                  Todo newTask = Todo(
+                                    title: titleController.text,
+                                    description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                                    dateTime: DateTime(
+                                      selectedDate.year,
+                                      selectedDate.month,
+                                      selectedDate.day,
+                                      selectedTime.hour,
+                                      selectedTime.minute,
                                     ),
                                   );
+
+                                  taskList.add(newTask);
+                                  widget.addTodo(newTask);
+
                                   setState(() {});
                                   Navigator.pop(context);
                                   titleController.clear();
@@ -292,6 +299,9 @@ class _TodoScreenState extends State<TodoScreen> {
                                   Expanded(
                                     child: Text(myTodoList.description!, style: const TextStyle(color: AppColors.secondaryText, fontSize: 16)),
                                   ),
+                                ],
+                                if (myTodoList.description == null) ...[
+                                  const Spacer(),
                                 ],
                                 Padding(
                                   padding: const EdgeInsets.only(right: 16),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
+import '../model/todo_model.dart';
 import '../model/user_model.dart';
 
 class HomePageScreen extends StatefulWidget {
@@ -28,9 +29,18 @@ class _HomePageScreenState extends State<HomePageScreen> {
     super.initState();
     // TODO: implement initState
     _screens = [
-      TodoScreen(userTodo: widget.user.userTodo ?? []),
+      TodoScreen(
+        // loggedInUser: widget.user,
+        userTodo: widget.user.userTodo,
+        addTodo: addTodo,
+      ),
       ProfileScreen(user: widget.user),
     ];
+  }
+
+  void addTodo(Todo newTask) {
+    widget.user.userTodo.add(newTask);
+    print("Add new Todo=====> $newTask");
   }
 
   @override
