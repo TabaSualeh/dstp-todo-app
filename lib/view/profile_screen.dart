@@ -1,6 +1,8 @@
+import 'package:dstp_todo_app/constants/app_constants.dart';
 import 'package:dstp_todo_app/view/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
 import '../model/user_model.dart';
@@ -391,12 +393,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 // final route = MaterialPageRoute(
                                 //   builder: (context) {
                                 //     return LoginScreen();
                                 //   },
                                 // );
+                                SharedPreferences prefs = await SharedPreferences.getInstance();
+                                prefs.remove(AppConstants.rememberMeFlag);
+                                prefs.remove(AppConstants.rememberMeEmail);
                                 final route = MaterialPageRoute(builder: (context) => const LoginScreen());
                                 Navigator.pushReplacement(context, route);
                               },

@@ -1,5 +1,7 @@
+import 'package:dstp_todo_app/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_colors.dart';
 import '../data/user_data.dart';
@@ -21,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isProtected = true;
   User? loggedInUser;
   bool isLoading = false;
+  bool rememberMe = false;
 
   @override
   void initState() {
@@ -173,13 +176,26 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 0.02 * sw),
               Padding(
-                padding: EdgeInsets.only(right: 0.03 * sw),
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    child: Text("Forgot Password?", style: GoogleFonts.acme(color: AppColors.appbarColor, fontSize: 20)),
-                  ),
+                padding: EdgeInsets.only(right: 0.03 * sw, left: 0.03 * sw),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CheckboxListTile(
+                        horizontalTitleGap: 2,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        title: Text("Remember me", style: GoogleFonts.acme(color: AppColors.appbarColor, fontSize: 20)),
+                        value: rememberMe,
+                        onChanged: (value) {
+                          rememberMe = value!;
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text("Forgot Password?", style: GoogleFonts.acme(color: AppColors.appbarColor, fontSize: 20)),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: 0.09 * sh),
@@ -189,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 0.06 * sh,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.appbarColor.withValues(alpha: 0.7)),
-                  onPressed: () {
+                  onPressed: () async {
                     setState(() {
                       isLoading = true;
                     });
@@ -204,6 +220,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     }
 
                     if (loggedInUser != null) {
+                      final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+                      await prefs.setBool(AppConstants.rememberMeFlag, rememberMe);
+                      if (rememberMe) {
+                        await prefs.setString(AppConstants.rememberMeEmail, loggedInUser!.email);
+                      }
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
