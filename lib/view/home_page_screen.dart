@@ -31,8 +31,8 @@ class _HomePageScreenState extends State<HomePageScreen> {
     _screens = [
       TodoScreen(
         // loggedInUser: widget.user,
-        userTodo: widget.user.userTodo,
-        addTodo: addTodo,
+        // userTodo: widget.user.userTodo,
+        userEmailKey: widget.user.email,
       ),
       ProfileScreen(user: widget.user),
     ];
