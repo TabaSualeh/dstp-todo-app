@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:dstp_todo_app/controller/todo_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,76 +25,27 @@ class TodoScreen extends StatefulWidget {
 }
 
 class _TodoScreenState extends State<TodoScreen> {
-  int currentIndex = 0;
-
   // late final List<Todo> taskList = widget.loggedInUser.userTodo ??= [];
-  List<Todo> taskList = [];
+
+  TextEditingController searchController = TextEditingController();
+  FocusNode searchFocus = FocusNode();
+  TodoController todoController = TodoController();
 
   @override
   void initState() {
     super.initState();
-    convertStringListIntoTodoList();
+    onInitCalled();
   }
 
-  /// LIST TODO STORE IN SHARED PREFERENCE
-  /// Todo List -> Map List -> String List
-  List<String> convertTodoListIntoStringList() {
-    List<Map<String, dynamic>> todoMapList = taskList.map((item) => item.toMap()).toList();
-    List<String> jsonTodoList = todoMapList.map((mapItem) => jsonEncode(mapItem)).toList();
-    return jsonTodoList;
-  }
-
-  void saveTodoListInPref() async {
-    List<String> jsonTodoList = convertTodoListIntoStringList();
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setStringList(widget.userEmailKey, jsonTodoList);
-  }
-
-  /// GET LIST OF SAVED TODO FROM SHARED PREFERENCE
-  /// String List -> Map List -> Todo List
-  void convertStringListIntoTodoList() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> jsonTodo = prefs.getStringList(widget.userEmailKey) ?? [];
-    List<dynamic> mapTodo = jsonTodo.map((mapItem) => jsonDecode(mapItem)).toList();
-    List<Todo> todoList = mapTodo.map((item) => Todo.fromMap(item)).toList();
-    taskList = todoList;
+  void onInitCalled() async {
+    await todoController.convertStringListIntoTodoList(userEmailKey: widget.userEmailKey);
     setState(() {});
   }
 
-  /// SINGLE TODO STORE IN SHARED PREFERENCE
-  // String convertTodoIntoString() {
-  //   Todo todo = Todo(title: 'Flutter work'); //Create new Todo
-  //
-  //   Map<String, dynamic> newMapTodo = todo.toMap(); //Convert new todo into Map
-  //
-  //   String jsonTodo = jsonEncode(newMapTodo); // Convert that Map into Json (String)
-  //   return jsonTodo;
-  // }
-
-  // void saveTodoInPref(BuildContext context) async {
-  //   String todoString = convertTodoIntoString();
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   print("TODO IN STRING $todoString");
-  //   prefs.setString("SingleTodo", todoString); //Store in Shared Preference
-  //
-  //   ScaffoldMessenger.of(context).showSnackBar(
-  //     const SnackBar(
-  //       backgroundColor: Colors.green,
-  //       content: Text("Todo added succesfully"),
-  //     ),
-  //   );
-  // }
-
-  /// GET SINGLE SAVED TODO FROM SHARED PREFERENCE
-  // void convertStringIntoTodo() async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   String jsonTodo = prefs.getString("SingleTodo") ?? "";
-  //   dynamic todoMap = jsonDecode(jsonTodo);
-  //   Todo newTodo = Todo.fromMap(todoMap);
-  // }
-
   @override
   Widget build(BuildContext context) {
+    final sh = MediaQuery.of(context).size.height;
+    final sw = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: AppColors.bgColor,
       appBar: AppBar(
@@ -255,8 +207,8 @@ class _TodoScreenState extends State<TodoScreen> {
                                     ),
                                   );
 
-                                  taskList.add(newTask);
-                                  saveTodoListInPref();
+                                  todoController.taskList.add(newTask);
+                                  todoController.saveTodoListInPref(userEmailKey: widget.userEmailKey);
 
                                   setState(() {});
                                   Navigator.pop(context);
@@ -298,89 +250,361 @@ class _TodoScreenState extends State<TodoScreen> {
         },
         child: const Icon(Icons.add, color: AppColors.fabIconColor),
       ),
-      body: taskList.isEmpty
+      body: todoController.taskList.isEmpty
           ? Center(
               child: Lottie.asset(
                 AppAssets.noDataAnimation,
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              itemCount: taskList.length,
-              itemBuilder: (context, index) {
-                final myTodoList = taskList[index];
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(top: 8),
+          : Column(
+              children: [
+                Container(
+                  margin: EdgeInsets.only(
+                    top: 0.02 * sh,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.taskCardBgColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: (myTodoList.isCompleted ?? false) ? AppColors.taskCardBorderColor.withValues(alpha: 0.5) : AppColors.taskCardBorderColor, width: 1.5),
+                    boxShadow: searchFocus.hasFocus ? [const BoxShadow(color: AppColors.appbarColor, blurRadius: 6, spreadRadius: 0.4)] : [],
+                    // : const [],
                   ),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        checkColor: AppColors.bgColor,
-                        activeColor: AppColors.activeCheckboxColor,
-                        side: const BorderSide(color: AppColors.inactiveCheckboxBorderColor),
-                        value: myTodoList.isCompleted,
-                        onChanged: (bool? isCheckValue) {
-                          setState(() {
-                            myTodoList.isCompleted = isCheckValue;
-                            saveTodoListInPref();
-                          });
-                        },
+                  child: TextField(
+                    textInputAction: TextInputAction.done,
+                    focusNode: searchFocus,
+                    keyboardType: TextInputType.text,
+                    controller: searchController,
+                    style: const TextStyle(color: AppColors.primaryText),
+                    onChanged: (value) {
+                      todoController.searchList = todoController.taskList.where((item) => item.title.toLowerCase().contains(value.toLowerCase())).toList();
+                      setState(() {});
+                    },
+                    onSubmitted: (value) {
+                      print("ON SUBMITTED===== $value");
+                      searchFocus.unfocus();
+                      setState(() {});
+                    },
+                    onTap: () {
+                      setState(() {});
+                    },
+                    onTapOutside: (event) {
+                      searchFocus.unfocus();
+                      setState(() {});
+                    },
+                    decoration: InputDecoration(
+                      fillColor: AppColors.inputFieldBgColor,
+                      filled: true,
+                      prefixIcon: const Icon(Icons.search),
+                      prefixIconColor: AppColors.inputHintTextColor,
+                      hint: Text("Search title", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
                       ),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              myTodoList.title,
-                              style: TextStyle(color: (myTodoList.isCompleted ?? false) ? AppColors.completedText : AppColors.primaryText, fontSize: 20, decoration: (myTodoList.isCompleted ?? false) ? TextDecoration.lineThrough : null, decorationColor: AppColors.primaryText.withValues(alpha: 0.5), decorationThickness: 1.2),
-                            ),
-                            Row(
-                              children: [
-                                if (myTodoList.description != null) ...[
-                                  Expanded(
-                                    child: Text(myTodoList.description!, style: const TextStyle(color: AppColors.secondaryText, fontSize: 16)),
-                                  ),
-                                ],
-                                if (myTodoList.description == null) ...[
-                                  const Spacer(),
-                                ],
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 16),
-                                  child: Text(
-                                    myTodoList.dateTime != null ? "${myTodoList.dateTime?.year}/${myTodoList.dateTime?.month}/${myTodoList.dateTime?.day}\n${myTodoList.dateTime?.hour}:${myTodoList.dateTime?.minute}" : "",
-                                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
-                                    textAlign: TextAlign.end,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              onPressed: () {
-                                taskList.removeAt(index);
-                                saveTodoListInPref();
-                                setState(() {});
-                              },
-                              icon: Icon(
-                                Icons.delete,
-                                size: 28,
-                                color: AppColors.cancelIconColor,
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
+                      ),
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 35),
+                if (searchController.text.isNotEmpty && todoController.searchList.isEmpty) ...[
+                  Expanded(child: Lottie.asset(AppAssets.notFoundAnimation)),
+                ] else ...[
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      // itemCount: searchList.isNotEmpty ? searchList.length : taskList.length,
+                      itemCount: searchController.text.isNotEmpty ? todoController.searchList.length : todoController.taskList.length,
+                      itemBuilder: (context, index) {
+                        // final myTodo = searchList.isNotEmpty ? searchList[index] : taskList[index];
+                        final myTodo = searchController.text.isNotEmpty ? todoController.searchList[index] : todoController.taskList[index];
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.taskCardBgColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: (myTodo.isCompleted ?? false) ? AppColors.taskCardBorderColor.withValues(alpha: 0.5) : AppColors.taskCardBorderColor, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                shape: const CircleBorder(),
+                                checkColor: AppColors.bgColor,
+                                activeColor: AppColors.activeCheckboxColor,
+                                side: const BorderSide(color: AppColors.inactiveCheckboxBorderColor),
+                                value: myTodo.isCompleted,
+                                onChanged: (bool? isCheckValue) {
+                                  setState(() {
+                                    myTodo.isCompleted = isCheckValue;
+                                    todoController.saveTodoListInPref(userEmailKey: widget.userEmailKey);
+                                  });
+                                },
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      myTodo.title,
+                                      style: TextStyle(color: (myTodo.isCompleted ?? false) ? AppColors.completedText : AppColors.primaryText, fontSize: 20, decoration: (myTodo.isCompleted ?? false) ? TextDecoration.lineThrough : null, decorationColor: AppColors.primaryText.withValues(alpha: 0.5), decorationThickness: 1.2),
+                                    ),
+                                    Row(
+                                      children: [
+                                        if (myTodo.description != null) ...[
+                                          Expanded(
+                                            child: Text(myTodo.description!, style: const TextStyle(color: AppColors.secondaryText, fontSize: 16)),
+                                          ),
+                                        ],
+                                        if (myTodo.description == null) ...[
+                                          const Spacer(),
+                                        ],
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 16),
+                                          child: Text(
+                                            myTodo.dateTime != null ? "${myTodo.dateTime?.year}/${myTodo.dateTime?.month}/${myTodo.dateTime?.day}\n${myTodo.dateTime?.hour}:${myTodo.dateTime?.minute}" : "",
+                                            style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                                            textAlign: TextAlign.end,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          onPressed: () {
+                                            todoController.taskList.removeAt(index);
+                                            todoController.saveTodoListInPref(userEmailKey: widget.userEmailKey);
+                                            setState(() {});
+                                          },
+                                          icon: const Icon(
+                                            Icons.delete,
+                                            size: 28,
+                                            color: AppColors.cancelIconColor,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          onPressed: () {
+                                            final TextEditingController titleController = TextEditingController(
+                                              text: myTodo.title,
+                                            );
+                                            final TextEditingController descriptionController = TextEditingController(
+                                              text: myTodo.description,
+                                            );
+
+                                            DateTime selectedDate = DateTime(
+                                              myTodo.dateTime!.year,
+                                              myTodo.dateTime!.month,
+                                              myTodo.dateTime!.day,
+                                            );
+                                            TimeOfDay selectedTime = TimeOfDay(
+                                              hour: myTodo.dateTime!.hour,
+                                              minute: myTodo.dateTime!.minute,
+                                            );
+
+                                            showModalBottomSheet(
+                                              backgroundColor: AppColors.bottomSheetBgColor,
+                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                                              isScrollControlled: true,
+                                              // isDismissible: false,
+                                              context: context,
+                                              builder: (context) {
+                                                return StatefulBuilder(
+                                                  builder: (context, setBottomSheet) {
+                                                    return SafeArea(
+                                                      child: Padding(
+                                                        padding: EdgeInsets.only(left: 15, right: 15, top: 15, bottom: MediaQuery.of(context).viewInsets.bottom + 20),
+                                                        child: Column(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            Row(
+                                                              children: [
+                                                                Text("Update Task", style: GoogleFonts.acme(color: AppColors.primaryText, fontSize: 26)),
+                                                                const Spacer(),
+                                                                IconButton(
+                                                                  iconSize: 22,
+                                                                  onPressed: () {
+                                                                    Navigator.pop(context);
+                                                                  },
+                                                                  icon: Container(
+                                                                    decoration: const BoxDecoration(color: AppColors.cancelIconColor, shape: BoxShape.circle),
+                                                                    child: const Icon(Icons.keyboard_arrow_down_outlined, color: AppColors.bgColor),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            const SizedBox(height: 18),
+                                                            TextField(
+                                                              controller: titleController,
+                                                              style: const TextStyle(color: AppColors.primaryText),
+                                                              textInputAction: TextInputAction.next,
+                                                              decoration: InputDecoration(
+                                                                fillColor: AppColors.inputFieldBgColor,
+                                                                filled: true,
+                                                                hint: Text("Enter Task Title", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
+                                                                label: Text("TITLE", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
+                                                                enabledBorder: OutlineInputBorder(
+                                                                  borderRadius: BorderRadius.circular(12),
+                                                                  borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
+                                                                ),
+                                                                focusedBorder: OutlineInputBorder(
+                                                                  borderRadius: BorderRadius.circular(12),
+                                                                  borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
+                                                                ),
+                                                                border: const OutlineInputBorder(),
+                                                              ),
+                                                            ),
+                                                            const SizedBox(height: 15),
+                                                            TextField(
+                                                              controller: descriptionController,
+                                                              minLines: 4,
+                                                              maxLines: 20,
+                                                              style: const TextStyle(color: AppColors.primaryText),
+                                                              textInputAction: TextInputAction.newline,
+                                                              decoration: InputDecoration(
+                                                                fillColor: AppColors.inputFieldBgColor,
+                                                                filled: true,
+                                                                hint: Text("Enter Description (optional)", style: GoogleFonts.roboto(color: AppColors.inputHintTextColor)),
+                                                                label: Text("DESCRIPTION", style: GoogleFonts.roboto(color: AppColors.primaryText.withValues(alpha: 0.6))),
+                                                                enabledBorder: OutlineInputBorder(
+                                                                  borderRadius: BorderRadius.circular(12),
+                                                                  borderSide: BorderSide(color: AppColors.taskCardBorderColor.withValues(alpha: 0.7), width: 1.0),
+                                                                ),
+                                                                focusedBorder: OutlineInputBorder(
+                                                                  borderRadius: BorderRadius.circular(12),
+                                                                  borderSide: const BorderSide(color: AppColors.taskCardBorderColor, width: 2.0),
+                                                                ),
+                                                                border: const OutlineInputBorder(),
+                                                              ),
+                                                            ),
+
+                                                            const SizedBox(height: 25),
+
+                                                            // DATETIME--------------------------------------------
+                                                            Row(
+                                                              children: [
+                                                                Expanded(
+                                                                  child: ElevatedButton.icon(
+                                                                    onPressed: () async {
+                                                                      final tempDate = await showDatePicker(
+                                                                        context: context,
+                                                                        initialDate: DateTime.now(),
+                                                                        firstDate: DateTime.now(),
+                                                                        lastDate: DateTime(3000),
+                                                                      );
+                                                                      if (tempDate != null) {
+                                                                        selectedDate = tempDate;
+                                                                      }
+                                                                      setBottomSheet(() {});
+                                                                    },
+                                                                    label: Text(
+                                                                      "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
+                                                                    ),
+                                                                    icon: Icon(Icons.calendar_month_outlined),
+                                                                  ),
+                                                                ),
+                                                                SizedBox(width: 20),
+                                                                Expanded(
+                                                                  child: ElevatedButton.icon(
+                                                                    onPressed: () async {
+                                                                      final tempTime = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+                                                                      if (tempTime != null) {
+                                                                        selectedTime = tempTime;
+                                                                      }
+                                                                      setBottomSheet(() {});
+                                                                    },
+                                                                    label: Text(
+                                                                      selectedTime.format(context),
+                                                                    ),
+                                                                    icon: Icon(Icons.schedule_outlined),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            // ----------------------------------------------------
+                                                            const SizedBox(height: 25),
+                                                            SizedBox(
+                                                              width: double.infinity,
+                                                              height: MediaQuery.of(context).size.height * 0.05,
+                                                              child: ElevatedButton(
+                                                                onPressed: () {
+                                                                  if (titleController.text.isNotEmpty) {
+                                                                    Todo newTask = Todo(
+                                                                      title: titleController.text,
+                                                                      description: descriptionController.text.isEmpty ? null : descriptionController.text,
+                                                                      dateTime: DateTime(
+                                                                        selectedDate.year,
+                                                                        selectedDate.month,
+                                                                        selectedDate.day,
+                                                                        selectedTime.hour,
+                                                                        selectedTime.minute,
+                                                                      ),
+                                                                    );
+
+                                                                    // taskList.add(newTask);
+                                                                    todoController.taskList[index] = newTask;
+                                                                    todoController.saveTodoListInPref(userEmailKey: widget.userEmailKey);
+
+                                                                    setState(() {});
+                                                                    Navigator.pop(context);
+                                                                    titleController.clear();
+                                                                    descriptionController.clear();
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                      SnackBar(
+                                                                        content: Text(
+                                                                          "Task has been updated",
+                                                                          style: GoogleFonts.robotoSerif(
+                                                                            color: AppColors.primaryText,
+                                                                            fontSize: 16,
+                                                                          ),
+                                                                        ),
+                                                                        backgroundColor: Colors.green,
+                                                                      ),
+                                                                    );
+                                                                  } else {
+                                                                    Fluttertoast.showToast(
+                                                                      msg: "Title is required",
+                                                                      backgroundColor: Colors.red,
+                                                                      textColor: Colors.white,
+                                                                      fontSize: 16.0,
+                                                                    );
+                                                                  }
+                                                                },
+                                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBtnColor),
+                                                                child: Text("UPDATED TASK", style: GoogleFonts.acme(color: AppColors.primaryBtnTextColor)),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                            );
+                                          },
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            size: 28,
+                                            color: AppColors.inputHintTextColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                );
-              },
+                ],
+              ],
             ),
     );
   }

@@ -4,5 +4,6 @@ class AppAssets {
 
   static const String profilePic = '$_imagePath/loki.jpg';
   static const String noDataAnimation = '$_animationPath/no_data.json';
+  static const String notFoundAnimation = '$_animationPath/not_found.json';
   // static const String dummyPic = '$_imagePath/dummyPic.png';
 }
